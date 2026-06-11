@@ -4,48 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
-    <title>Etichette Automatiche Sketchfab</title>
+    <title>Sketchfab - Pivot Corretto</title>
     
     <script type="text/javascript" src="https://static.sketchfab.com/api/sketchfab-viewer-1.12.1.js"></script>
     
     <style>
-        body { margin: 0; padding: 0; font-family: sans-serif; background-color: #2c2c2c; }
-        #viewer-container { position: relative; width: 100%; height: 100vh; overflow: hidden; }
+        body { margin: 0; padding: 0; background-color: #2c2c2c; height: 100vh; }
         #api-frame { width: 100%; height: 100%; border: none; }
-
-        /* Stile delle etichette generate dinamicamente */
-        .etichetta-fluttuante {
-            position: absolute;
-            z-index: 1000; /* <--- AGGIUNGI QUESTA RIGA! */
-            top: -100px; left: -100px;
-            background-color: rgba(28, 170, 217, 0.9);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 30px;
-            font-size: 14px;
-            font-weight: bold;
-            box-shadow: 0px 4px 15px rgba(0,0,0,0.5);
-            transform: translate(-50%, -50%);
-            transition: opacity 0.2s ease-out;
-            cursor: pointer;
-            pointer-events: auto;
-            white-space: nowrap;
-        }
-        .etichetta-fluttuante:hover { background-color: rgba(21, 136, 175, 1); }
     </style>
 </head>
 <body>
 
-    <div id="viewer-container">
-        <iframe src="" id="api-frame" allow="autoplay; fullscreen; vr" allowvr allowfullscreen mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
-    </div>
+    <iframe src="" id="api-frame" allow="autoplay; fullscreen; vr" allowvr allowfullscreen mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
 
     <script type="text/javascript">
         var modelUid = '63418af586f14584ab947ca56c9f1a8c'; 
         var iframe = document.getElementById('api-frame');
         var client = new window.Sketchfab('1.12.1', iframe);
         var api = null;
-        var etichetteGenerate = [];
+
+        // ==========================================
+        // 1. LA TUA LISTA DEI PIVOT CORRETTI
+        // ==========================================
+        // L'ordine deve essere esatto: la prima riga è per l'annotazione 1, la seconda per la 2, ecc.
+        var coordinateCorrette = [
+            { eye: [5.000, 5.000, 5.000], target: [0.000, 0.000, 0.000] }, // Annotazione 1 (01)
+            { eye: [5.000, 5.000, 5.000], target: [0.000, 0.000, 0.000] }, // Annotazione 2 (ale)
+            { eye: [5.000, 5.000, 5.000], target: [0.000, 0.000, 0.000] }  // Annotazione 3 (zzz)
+        ];
 
         client.init(modelUid, {
             success: function success(sketchfabApi) {
@@ -53,88 +39,52 @@
                 api.start();
                 
                 api.addEventListener('viewerready', function() {
-                    console.log('1. Modello caricato! Provo a nascondere i pallini...');
-                    
-                    // PNG trasparente universale
-                    var pngTrasparente = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
-                    
-                    api.setAnnotationsTexture(pngTrasparente, function(err) {
-                        if(err) {
-                            console.error('ERRORE: Impossibile nascondere i pallini nativi.', err);
-                        } else {
-                            console.log('2. Pallini nativi nascosti con successo!');
+                    console.log('Modello pronto. Attivo il bypass del pivot!');
+
+                    // ==========================================
+                    // 2. IL DIROTTATORE DI TELECAMERA
+                    // ==========================================
+                    api.addEventListener('annotationSelect', function(index) {
+                        // Se index è -1 significa che l'utente ha cliccato fuori chiudendo l'annotazione
+                        if (index === -1) return; 
+
+                        // Controlliamo se hai inserito le coordinate per questa nota
+                        if (coordinateCorrette[index]) {
+                            var vista = coordinateCorrette[index];
+                            
+                            // Usiamo un ritardo di un decimo di secondo (100ms) per far partire
+                            // il nostro comando DOPO quello nativo di Sketchfab, sovrascrivendolo.
+                            setTimeout(function() {
+                                api.setCameraLookAt(vista.eye, vista.target, 1.5);
+                            }, 100);
                         }
                     });
-                    
-                    // Ritardo di sicurezza per far caricare i dati da Sketchfab
-                    setTimeout(generaEtichetteDaSketchfab, 500);
                 });
             },
             error: function error() { console.error('Errore nel caricamento.'); },
+            // Manteniamo TUTTA la grafica originale nativa accesa!
             ui_annotations: 1, 
             ui_infos: 0
         });
 
-        function generaEtichetteDaSketchfab() {
-            var container = document.getElementById('viewer-container');
-            console.log('3. Cerco le annotazioni salvate...');
-
-            api.getAnnotationList(function(err, annotations) {
-                if (err) {
-                    console.error('ERRORE: Impossibile leggere la lista delle annotazioni', err);
-                    return;
-                }
-
-                console.log('4. Trovate ' + annotations.length + ' annotazioni! Genero le etichette HTML...');
-
-                annotations.forEach(function(nota, index) {
-                    var divEtichetta = document.createElement('div');
-                    divEtichetta.className = 'etichetta-fluttuante';
-                    divEtichetta.innerText = nota.name; 
-                    container.appendChild(divEtichetta);
-
-                    divEtichetta.addEventListener('click', function() {
-                        api.gotoAnnotation(index);
-                    });
-
-                    etichetteGenerate.push({
-                        elementoDOM: divEtichetta,
-                        coord3D: nota.target 
-                    });
-                });
-
-                avviaInseguimento();
-            });
-        }
-
-       function avviaInseguimento() {
-            
-            // Creiamo la funzione di calcolo matematico
-            function aggiornaPosizioni() {
-                etichetteGenerate.forEach(function(dati) {
-                    api.worldToScreen(dati.coord3D, function(err, coord2D) {
-                        if (!err && coord2D) {
-                            dati.elementoDOM.style.left = coord2D[0] + 'px';
-                            dati.elementoDOM.style.top = coord2D[1] + 'px';
-                            
-                            if (coord2D[0] < -500 || coord2D[1] < -500) {
-                                dati.elementoDOM.style.opacity = '0';
-                                dati.elementoDOM.style.pointerEvents = 'none';
-                            } else {
-                                dati.elementoDOM.style.opacity = '1';
-                                dati.elementoDOM.style.pointerEvents = 'auto';
-                            }
+        // ==========================================
+        // 3. LO STRUMENTO SEGRETO PER TROVARE LE COORDINATE
+        // ==========================================
+        // Premi il tasto 'C' sulla tastiera per copiare le coordinate attuali!
+        window.addEventListener('keydown', function(event) {
+            if (event.key === 'c' || event.key === 'C') {
+                if (api) {
+                    api.getCameraLookAt(function(err, camera) {
+                        if (!err) {
+                            var codice = '{ eye: [' + camera.position.map(n => n.toFixed(3)).join(', ') + '], target: [' + camera.target.map(n => n.toFixed(3)).join(', ') + '] },';
+                            console.log("Copia questa riga:");
+                            console.log(codice);
+                            alert("Coordinate stampate nella Console (F12)!");
                         }
                     });
-                });
+                }
             }
-
-            // 1. ESEGUE IL POSIZIONAMENTO IMMEDIATAMENTE (Senza aspettare)
-            aggiornaPosizioni();
-
-            // 2. CONTINUA A FARLO QUANDO SI MUOVE LA TELECAMERA
-            api.addEventListener('cameramove', aggiornaPosizioni);
-        }
+        });
     </script>
 </body>
 </html>
