@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
-    <title>Sketchfab - Etichette Personalizzate</title>
+    <title>Sketchfab - Viste Personalizzate</title>
     
     <script type="text/javascript" src="https://static.sketchfab.com/api/sketchfab-viewer-1.12.1.js"></script>
     
@@ -30,31 +30,34 @@
             border: none; 
         }
 
-        /* --- STILE DELLE ETICHETTE --- */
-        .etichetta-titolo {
+        /* --- STILE DEI BOTTONI --- */
+        #menu-viste {
             position: absolute;
-            z-index: 1000; /* Assicura che stiano SOPRA l'iframe 3D */
-            top: -100px; left: -100px; 
-            
-            background-color: rgba(0, 0, 0, 0.75);
-            color: #ffffff;
-            padding: 8px 16px;
-            border-radius: 4px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            font-size: 14px;
-            font-weight: 600;
-            white-space: nowrap;
-            box-shadow: 0px 4px 10px rgba(0,0,0,0.4);
-            
-            transform: translate(-50%, -50%);
-            transition: background-color 0.2s, transform 0.2s;
-            cursor: pointer;
-            pointer-events: auto;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 1000;
         }
 
-        .etichetta-titolo:hover { 
-            background-color: rgba(28, 170, 217, 0.95); 
-            transform: translate(-50%, -50%) scale(1.05);
+        .btn-vista {
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .btn-vista:hover {
+            background-color: #1caad9; /* Azzurro Sketchfab */
+            border-color: #1caad9;
+            transform: translateY(-2px);
         }
     </style>
 </head>
@@ -62,6 +65,13 @@
 
     <div id="viewer-container">
         <iframe src="" id="api-frame" allow="autoplay; fullscreen; vr" allowvr allowfullscreen mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
+        
+        <div id="menu-viste">
+            <button class="btn-vista" id="btn-1">Vista 1</button>
+            <button class="btn-vista" id="btn-2">Vista 2</button>
+            <button class="btn-vista" id="btn-3">Vista 3</button>
+            <button class="btn-vista" id="btn-4">Vista 4</button>
+        </div>
     </div>
 
     <script type="text/javascript">
@@ -69,7 +79,17 @@
         var iframe = document.getElementById('api-frame');
         var client = new window.Sketchfab('1.12.1', iframe);
         var api = null;
-        var etichetteGenerate = [];
+
+        // ==========================================
+        // 1. IMPOSTA QUI LE TUE VISTE CATTURATE
+        // ==========================================
+        // Sostituisci questi valori con quelli che catturi usando il tasto 'C'
+        var viste = {
+            vista1: { eye: [5.000, 5.000, 5.000], target: [0.000, 0.000, 0.000] },
+            vista2: { eye: [-5.000, 5.000, 5.000], target: [0.000, 0.000, 0.000] },
+            vista3: { eye: [0.000, -5.000, 5.000], target: [0.000, 0.000, 0.000] },
+            vista4: { eye: [0.000, 0.000, -5.000], target: [0.000, 0.000, 0.000] }
+        };
 
         client.init(modelUid, {
             success: function success(sketchfabApi) {
@@ -77,94 +97,52 @@
                 api.start();
                 
                 api.addEventListener('viewerready', function() {
-                    console.log('Modello pronto. Nascondo i pallini nativi...');
+                    console.log('Modello pronto. I bottoni sono attivi!');
+
+                    // ==========================================
+                    // 2. COLLEGAMENTO DEI BOTTONI ALLE VISTE
+                    // ==========================================
+                    // Il numero "1.5" alla fine indica la durata dell'animazione in secondi
                     
-                    // 1. Pixel PNG invisibile per nascondere i numeri
-                    var pngTrasparente = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
-                    api.setAnnotationsTexture(pngTrasparente);
-                    
-                    // 2. Aspettiamo mezzo secondo per sicurezza, poi generiamo le etichette
-                    setTimeout(creaEtichette, 500);
+                    document.getElementById('btn-1').addEventListener('click', function() {
+                        api.setCameraLookAt(viste.vista1.eye, viste.vista1.target, 1.5);
+                    });
+
+                    document.getElementById('btn-2').addEventListener('click', function() {
+                        api.setCameraLookAt(viste.vista2.eye, viste.vista2.target, 1.5);
+                    });
+
+                    document.getElementById('btn-3').addEventListener('click', function() {
+                        api.setCameraLookAt(viste.vista3.eye, viste.vista3.target, 1.5);
+                    });
+
+                    document.getElementById('btn-4').addEventListener('click', function() {
+                        api.setCameraLookAt(viste.vista4.eye, viste.vista4.target, 1.5);
+                    });
                 });
             },
             error: function error() { console.error('Errore nel caricamento del modello.'); },
-            ui_annotations: 1, // Fondamentale per far aprire i fumetti
+            ui_annotations: 1, // Lascia le note native se vuoi usarle, altrimenti metti 0
             ui_infos: 0
         });
 
         // ==========================================
-        // CREAZIONE DELLE ETICHETTE DA SKETCHFAB
+        // 3. LO STRUMENTO DI CATTURA (Tasto 'C')
         // ==========================================
-        function creaEtichette() {
-            var container = document.getElementById('viewer-container');
-            console.log('Leggo le annotazioni...');
-
-            api.getAnnotationList(function(err, annotations) {
-                if (err) {
-                    console.error('Errore lettura annotazioni', err);
-                    return;
-                }
-
-                annotations.forEach(function(nota, index) {
-                    // Crea l'elemento HTML visivo
-                    var divEtichetta = document.createElement('div');
-                    divEtichetta.className = 'etichetta-titolo';
-                    divEtichetta.innerText = nota.name; 
-                    
-                    container.appendChild(divEtichetta);
-
-                    // Apre l'annotazione al clic
-                    divEtichetta.addEventListener('click', function() {
-                        api.gotoAnnotation(index);
-                    });
-
-                    // Salva i dati per il tracciamento
-                    etichetteGenerate.push({
-                        elementoDOM: divEtichetta,
-                        coord3D: nota.target 
-                    });
-                });
-
-                console.log('Etichette create! Avvio il tracciamento.');
-                avviaInseguimento();
-            });
-        }
-
-        // ==========================================
-        // TRACCIAMENTO TELECAMERA (CICLO CONTINUO A 60 FPS)
-        // ==========================================
-        function avviaInseguimento() {
-            
-            function aggiornaPosizioni() {
-                etichetteGenerate.forEach(function(dati) {
-                    
-                    api.getWorldToScreenCoordinates(dati.coord3D, function(risultato) {
-                        if (risultato && risultato.canvasCoord) {
-                            var x = risultato.canvasCoord[0];
-                            var y = risultato.canvasCoord[1];
-                            
-                            dati.elementoDOM.style.left = x + 'px';
-                            dati.elementoDOM.style.top = y + 'px';
-                            
-                            if (x < -1000 || y < -1000) {
-                                dati.elementoDOM.style.opacity = '0';
-                                dati.elementoDOM.style.pointerEvents = 'none';
-                            } else {
-                                dati.elementoDOM.style.opacity = '1';
-                                dati.elementoDOM.style.pointerEvents = 'auto';
-                            }
+        window.addEventListener('keydown', function(event) {
+            if (event.key === 'c' || event.key === 'C') {
+                if (api) {
+                    api.getCameraLookAt(function(err, camera) {
+                        if (!err) {
+                            var codice = '{ eye: [' + camera.position.map(n => n.toFixed(3)).join(', ') + '], target: [' + camera.target.map(n => n.toFixed(3)).join(', ') + '] }';
+                            console.log("Copia questa riga per la tua vista:");
+                            console.log(codice);
+                            alert("Coordinate stampate nella Console (F12)!");
                         }
                     });
-                });
-
-                // LA MAGIA: Richiama se stessa al frame successivo del monitor
-                // creando un loop infinito e fluidissimo.
-                window.requestAnimationFrame(aggiornaPosizioni);
+                }
             }
-
-            // Innesca il ciclo infinito appena le etichette vengono create
-            aggiornaPosizioni();
-        }
+        });
     </script>
 </body>
 </html>
