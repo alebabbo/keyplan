@@ -4,90 +4,163 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
-    <title>Sketchfab - Pivot Corretto</title>
+    <title>Sketchfab - Etichette con Titolo</title>
     
     <script type="text/javascript" src="https://static.sketchfab.com/api/sketchfab-viewer-1.12.1.js"></script>
     
     <style>
-        body { margin: 0; padding: 0; background-color: #2c2c2c; height: 100vh; }
-        #api-frame { width: 100%; height: 100%; border: none; }
+        body { 
+            margin: 0; 
+            padding: 0; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #2c2c2c; 
+            height: 100vh; 
+            overflow: hidden;
+        }
+        
+        #viewer-container { 
+            position: relative; 
+            width: 100%; 
+            height: 100%; 
+        }
+        
+        #api-frame { 
+            width: 100%; 
+            height: 100%; 
+            border: none; 
+        }
+
+        /* Stile delle tue nuove etichette testuali */
+        .etichetta-titolo {
+            position: absolute;
+            z-index: 1000;
+            top: -100px; left: -100px; /* Nascoste fuori schermo all'avvio */
+            
+            /* Colori e forme (puoi modificarli come preferisci) */
+            background-color: rgba(0, 0, 0, 0.75);
+            color: #ffffff;
+            padding: 8px 16px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            font-size: 14px;
+            font-weight: 600;
+            white-space: nowrap;
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.4);
+            
+            /* Centratura perfetta sul punto 3D */
+            transform: translate(-50%, -50%);
+            transition: background-color 0.2s, transform 0.2s;
+            cursor: pointer;
+            pointer-events: auto;
+        }
+
+        /* Effetto hover quando passi il mouse sull'etichetta */
+        .etichetta-titolo:hover { 
+            background-color: rgba(28, 170, 217, 0.95); /* Azzurro Sketchfab */
+            transform: translate(-50%, -50%) scale(1.05);
+        }
     </style>
 </head>
 <body>
 
-    <iframe src="" id="api-frame" allow="autoplay; fullscreen; vr" allowvr allowfullscreen mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
+    <div id="viewer-container">
+        <iframe src="" id="api-frame" allow="autoplay; fullscreen; vr" allowvr allowfullscreen mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
+    </div>
 
     <script type="text/javascript">
         var modelUid = '63418af586f14584ab947ca56c9f1a8c'; 
         var iframe = document.getElementById('api-frame');
         var client = new window.Sketchfab('1.12.1', iframe);
         var api = null;
+        var etichetteGenerate = []; // Qui salveremo i nostri bottoni
 
-        // ==========================================
-        // 1. LA TUA LISTA DEI PIVOT CORRETTI
-        // ==========================================
-        // L'ordine deve essere esatto: la prima riga è per l'annotazione 1, la seconda per la 2, ecc.
-        var coordinateCorrette = [
-            { eye: [5.000, 5.000, 5.000], target: [0.000, 0.000, 0.000] }, // Annotazione 1 (01)
-            { eye: [5.000, 5.000, 5.000], target: [0.000, 0.000, 0.000] }, // Annotazione 2 (ale)
-            { eye: [5.000, 5.000, 5.000], target: [0.000, 0.000, 0.000] }  // Annotazione 3 (zzz)
-        ];
-
-client.init(modelUid, {
+        client.init(modelUid, {
             success: function success(sketchfabApi) {
                 api = sketchfabApi;
                 api.start();
                 
                 api.addEventListener('viewerready', function() {
-                    console.log('Modello pronto. Leggo le note...');
-
-                    // 1. Leggiamo la lista direttamente dai server di Sketchfab
-                    api.getAnnotationList(function(err, annotations) {
-                        if (err) {
-                            console.error('Errore nella lettura delle note.');
-                            return;
-                        }
-
-                        // 2. Intercettiamo il clic sui pallini nativi
-                        api.addEventListener('annotationSelect', function(index) {
-                            if (index === -1) return; 
-
-                            // Prendiamo i dati precisi di QUELLA specifica nota
-                            var nota = annotations[index];
-                            
-                            // 3. Forziamo la telecamera a usare i parametri originali
-                            setTimeout(function() {
-                                // Usiamo nota.eye e nota.target letti in automatico!
-                                api.setCameraLookAt(nota.eye, nota.target, 1.0);
-                                console.log("Pivot forzato a:", nota.target);
-                            }, 50); 
-                        });
-                    });
+                    
+                    // 1. Nascondiamo i pallini nativi con un pixel PNG invisibile
+                    var pngTrasparente = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+                    api.setAnnotationsTexture(pngTrasparente);
+                    
+                    // Aspettiamo mezzo secondo per sicurezza, poi generiamo le etichette
+                    setTimeout(creaEtichette, 500);
                 });
             },
-            error: function error() { console.error('Errore nel caricamento.'); },
-            ui_annotations: 1, 
+            error: function error() { console.error('Errore nel caricamento del modello.'); },
+            ui_annotations: 1, // Manteniamo la UI attiva per i fumetti
             ui_infos: 0
         });
 
         // ==========================================
-        // 3. LO STRUMENTO SEGRETO PER TROVARE LE COORDINATE
+        // 2. CREAZIONE DELLE ETICHETTE
         // ==========================================
-        // Premi il tasto 'C' sulla tastiera per copiare le coordinate attuali!
-        window.addEventListener('keydown', function(event) {
-            if (event.key === 'c' || event.key === 'C') {
-                if (api) {
-                    api.getCameraLookAt(function(err, camera) {
-                        if (!err) {
-                            var codice = '{ eye: [' + camera.position.map(n => n.toFixed(3)).join(', ') + '], target: [' + camera.target.map(n => n.toFixed(3)).join(', ') + '] },';
-                            console.log("Copia questa riga:");
-                            console.log(codice);
-                            alert("Coordinate stampate nella Console (F12)!");
+        function creaEtichette() {
+            var container = document.getElementById('viewer-container');
+
+            api.getAnnotationList(function(err, annotations) {
+                if (err) return;
+
+                annotations.forEach(function(nota, index) {
+                    // Crea l'elemento HTML
+                    var divEtichetta = document.createElement('div');
+                    divEtichetta.className = 'etichetta-titolo';
+                    divEtichetta.innerText = nota.name; // Usa il titolo della nota
+                    
+                    container.appendChild(divEtichetta);
+
+                    // Al clic, apri l'annotazione originale
+                    divEtichetta.addEventListener('click', function() {
+                        api.gotoAnnotation(index);
+                    });
+
+                    // Salva in memoria l'elemento e il suo pivot 3D
+                    etichetteGenerate.push({
+                        elementoDOM: divEtichetta,
+                        coord3D: nota.target 
+                    });
+                });
+
+                // Avvia il calcolo della posizione
+                avviaInseguimento();
+            });
+        }
+
+        // ==========================================
+        // 3. INSEGUIMENTO TELECAMERA
+        // ==========================================
+        function avviaInseguimento() {
+            
+            function aggiornaPosizioni() {
+                etichetteGenerate.forEach(function(dati) {
+                    
+                    // Trasforma le coordinate 3D in pixel dello schermo
+                    api.worldToScreen(dati.coord3D, function(err, coord2D) {
+                        if (!err && coord2D) {
+                            dati.elementoDOM.style.left = coord2D[0] + 'px';
+                            dati.elementoDOM.style.top = coord2D[1] + 'px';
+                            
+                            // Nascondi l'etichetta se il punto va dietro la telecamera
+                            if (coord2D[0] < -500 || coord2D[1] < -500) {
+                                dati.elementoDOM.style.opacity = '0';
+                                dati.elementoDOM.style.pointerEvents = 'none';
+                            } else {
+                                dati.elementoDOM.style.opacity = '1';
+                                dati.elementoDOM.style.pointerEvents = 'auto';
+                            }
                         }
                     });
-                }
+                });
             }
-        });
+
+            // Posiziona i titoli subito, prima ancora che l'utente muova il mouse
+            aggiornaPosizioni();
+
+            // Aggiorna la posizione a ogni movimento
+            api.addEventListener('cameramove', aggiornaPosizioni);
+        }
     </script>
 </body>
 </html>
