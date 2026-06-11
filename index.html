@@ -33,36 +33,39 @@
             { eye: [5.000, 5.000, 5.000], target: [0.000, 0.000, 0.000] }  // Annotazione 3 (zzz)
         ];
 
-        client.init(modelUid, {
+client.init(modelUid, {
             success: function success(sketchfabApi) {
                 api = sketchfabApi;
                 api.start();
                 
                 api.addEventListener('viewerready', function() {
-                    console.log('Modello pronto. Attivo il bypass del pivot!');
+                    console.log('Modello pronto. Leggo le note...');
 
-                    // ==========================================
-                    // 2. IL DIROTTATORE DI TELECAMERA
-                    // ==========================================
-                    api.addEventListener('annotationSelect', function(index) {
-                        // Se index è -1 significa che l'utente ha cliccato fuori chiudendo l'annotazione
-                        if (index === -1) return; 
-
-                        // Controlliamo se hai inserito le coordinate per questa nota
-                        if (coordinateCorrette[index]) {
-                            var vista = coordinateCorrette[index];
-                            
-                            // Usiamo un ritardo di un decimo di secondo (100ms) per far partire
-                            // il nostro comando DOPO quello nativo di Sketchfab, sovrascrivendolo.
-                            setTimeout(function() {
-                                api.setCameraLookAt(vista.eye, vista.target, 1.5);
-                            }, 100);
+                    // 1. Leggiamo la lista direttamente dai server di Sketchfab
+                    api.getAnnotationList(function(err, annotations) {
+                        if (err) {
+                            console.error('Errore nella lettura delle note.');
+                            return;
                         }
+
+                        // 2. Intercettiamo il clic sui pallini nativi
+                        api.addEventListener('annotationSelect', function(index) {
+                            if (index === -1) return; 
+
+                            // Prendiamo i dati precisi di QUELLA specifica nota
+                            var nota = annotations[index];
+                            
+                            // 3. Forziamo la telecamera a usare i parametri originali
+                            setTimeout(function() {
+                                // Usiamo nota.eye e nota.target letti in automatico!
+                                api.setCameraLookAt(nota.eye, nota.target, 1.0);
+                                console.log("Pivot forzato a:", nota.target);
+                            }, 50); 
+                        });
                     });
                 });
             },
             error: function error() { console.error('Errore nel caricamento.'); },
-            // Manteniamo TUTTA la grafica originale nativa accesa!
             ui_annotations: 1, 
             ui_infos: 0
         });
