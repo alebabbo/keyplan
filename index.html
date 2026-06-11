@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
-    <title>Sketchfab - Viste Personalizzate</title>
+    <title>Sketchfab - Viste Personalizzate e Cattura</title>
     
     <script type="text/javascript" src="https://static.sketchfab.com/api/sketchfab-viewer-1.12.1.js"></script>
     
@@ -30,7 +30,7 @@
             border: none; 
         }
 
-        /* --- STILE DEI BOTTONI --- */
+        /* --- MENU DELLE VISTE (In basso) --- */
         #menu-viste {
             position: absolute;
             bottom: 30px;
@@ -51,13 +51,55 @@
             font-weight: bold;
             cursor: pointer;
             transition: all 0.2s ease;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
 
         .btn-vista:hover {
-            background-color: #1caad9; /* Azzurro Sketchfab */
+            background-color: #1caad9; 
             border-color: #1caad9;
-            transform: translateY(-2px);
+        }
+
+        /* --- PANNELLO STRUMENTI (In alto a destra) --- */
+        #pannello-strumenti {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background-color: rgba(0, 0, 0, 0.85);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #444;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        #btn-cattura {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        #btn-cattura:hover {
+            background-color: #c0392b;
+        }
+
+        #output-coordinate {
+            width: 320px;
+            height: 50px;
+            background-color: #111;
+            color: #0f0; /* Verde in stile codice */
+            border: 1px solid #555;
+            border-radius: 4px;
+            padding: 5px;
+            font-family: monospace;
+            font-size: 13px;
+            resize: none;
+            display: none; /* Nasconde la casella finché non clicchi */
         }
     </style>
 </head>
@@ -72,6 +114,11 @@
             <button class="btn-vista" id="btn-3">Vista 3</button>
             <button class="btn-vista" id="btn-4">Vista 4</button>
         </div>
+
+        <div id="pannello-strumenti">
+            <button id="btn-cattura">📸 Cattura Coordinate</button>
+            <textarea id="output-coordinate" readonly></textarea>
+        </div>
     </div>
 
     <script type="text/javascript">
@@ -81,9 +128,8 @@
         var api = null;
 
         // ==========================================
-        // 1. IMPOSTA QUI LE TUE VISTE CATTURATE
+        // 1. INCOLLA QUI LE VISTE CHE CATTURI
         // ==========================================
-        // Sostituisci questi valori con quelli che catturi usando il tasto 'C'
         var viste = {
             vista1: { eye: [5.000, 5.000, 5.000], target: [0.000, 0.000, 0.000] },
             vista2: { eye: [-5.000, 5.000, 5.000], target: [0.000, 0.000, 0.000] },
@@ -97,13 +143,8 @@
                 api.start();
                 
                 api.addEventListener('viewerready', function() {
-                    console.log('Modello pronto. I bottoni sono attivi!');
-
-                    // ==========================================
-                    // 2. COLLEGAMENTO DEI BOTTONI ALLE VISTE
-                    // ==========================================
-                    // Il numero "1.5" alla fine indica la durata dell'animazione in secondi
                     
+                    // Collega i bottoni alle coordinate
                     document.getElementById('btn-1').addEventListener('click', function() {
                         api.setCameraLookAt(viste.vista1.eye, viste.vista1.target, 1.5);
                     });
@@ -122,25 +163,33 @@
                 });
             },
             error: function error() { console.error('Errore nel caricamento del modello.'); },
-            ui_annotations: 1, // Lascia le note native se vuoi usarle, altrimenti metti 0
+            ui_annotations: 0, // Puoi mettere a 1 se ti servono le note native
             ui_infos: 0
         });
 
         // ==========================================
-        // 3. LO STRUMENTO DI CATTURA (Tasto 'C')
+        // 2. IL BOTTONE DI CATTURA (Funzionante al 100%)
         // ==========================================
-        window.addEventListener('keydown', function(event) {
-            if (event.key === 'c' || event.key === 'C') {
-                if (api) {
-                    api.getCameraLookAt(function(err, camera) {
-                        if (!err) {
-                            var codice = '{ eye: [' + camera.position.map(n => n.toFixed(3)).join(', ') + '], target: [' + camera.target.map(n => n.toFixed(3)).join(', ') + '] }';
-                            console.log("Copia questa riga per la tua vista:");
-                            console.log(codice);
-                            alert("Coordinate stampate nella Console (F12)!");
-                        }
-                    });
-                }
+        document.getElementById('btn-cattura').addEventListener('click', function() {
+            if (api) {
+                api.getCameraLookAt(function(err, camera) {
+                    if (!err) {
+                        // Genera il codice esatto
+                        var codice = '{ eye: [' + camera.position.map(n => n.toFixed(3)).join(', ') + '], target: [' + camera.target.map(n => n.toFixed(3)).join(', ') + '] }';
+                        
+                        // Lo stampa anche nella Console per sicurezza
+                        console.log("Copia questa riga per la tua vista:");
+                        console.log(codice);
+                        
+                        // Mostra la casella di testo su schermo
+                        var textBox = document.getElementById('output-coordinate');
+                        textBox.style.display = 'block';
+                        
+                        // Inserisce il codice e lo seleziona in automatico
+                        textBox.value = codice;
+                        textBox.select();
+                    }
+                });
             }
         });
     </script>
