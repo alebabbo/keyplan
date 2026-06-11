@@ -16,6 +16,7 @@
         /* Stile delle etichette generate dinamicamente */
         .etichetta-fluttuante {
             position: absolute;
+            z-index: 1000; /* <--- AGGIUNGI QUESTA RIGA! */
             top: -100px; left: -100px;
             background-color: rgba(28, 170, 217, 0.9);
             color: white;
@@ -106,8 +107,10 @@
             });
         }
 
-        function avviaInseguimento() {
-            api.addEventListener('cameramove', function() {
+       function avviaInseguimento() {
+            
+            // Creiamo la funzione di calcolo matematico
+            function aggiornaPosizioni() {
                 etichetteGenerate.forEach(function(dati) {
                     api.worldToScreen(dati.coord3D, function(err, coord2D) {
                         if (!err && coord2D) {
@@ -124,7 +127,13 @@
                         }
                     });
                 });
-            });
+            }
+
+            // 1. ESEGUE IL POSIZIONAMENTO IMMEDIATAMENTE (Senza aspettare)
+            aggiornaPosizioni();
+
+            // 2. CONTINUA A FARLO QUANDO SI MUOVE LA TELECAMERA
+            api.addEventListener('cameramove', aggiornaPosizioni);
         }
     </script>
 </body>
