@@ -131,25 +131,21 @@
         }
 
         // ==========================================
-        // TRACCIAMENTO TELECAMERA (IL MOTORE CORRETTO)
+        // TRACCIAMENTO TELECAMERA (CICLO CONTINUO A 60 FPS)
         // ==========================================
         function avviaInseguimento() {
             
             function aggiornaPosizioni() {
                 etichetteGenerate.forEach(function(dati) {
                     
-                    // La funzione esatta per trasformare le coordinate 3D in coordinate dello schermo
                     api.getWorldToScreenCoordinates(dati.coord3D, function(risultato) {
-                        
                         if (risultato && risultato.canvasCoord) {
                             var x = risultato.canvasCoord[0];
                             var y = risultato.canvasCoord[1];
                             
-                            // Applica i pixel al CSS dell'elemento
                             dati.elementoDOM.style.left = x + 'px';
                             dati.elementoDOM.style.top = y + 'px';
                             
-                            // Gestione della visibilità (nasconde se fuori inquadratura o dietro la telecamera)
                             if (x < -1000 || y < -1000) {
                                 dati.elementoDOM.style.opacity = '0';
                                 dati.elementoDOM.style.pointerEvents = 'none';
@@ -160,13 +156,14 @@
                         }
                     });
                 });
+
+                // LA MAGIA: Richiama se stessa al frame successivo del monitor
+                // creando un loop infinito e fluidissimo.
+                window.requestAnimationFrame(aggiornaPosizioni);
             }
 
-            // Forza il primo posizionamento immediato
+            // Innesca il ciclo infinito appena le etichette vengono create
             aggiornaPosizioni();
-
-            // Continua ad aggiornare durante i movimenti di camera
-            api.addEventListener('cameramove', aggiornaPosizioni);
         }
     </script>
 </body>
